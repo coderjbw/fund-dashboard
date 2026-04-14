@@ -1,0 +1,203 @@
+
+> pagebuilder-react-template@1.0.19 dev
+> vite
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+  VITE v5.4.21  ready in 330 ms
+
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: use --host to expose
+3:54:56 PM [vite] http proxy error: /js/025209.js?rt=1773388496499
+Error: getaddrinfo ENOTFOUND fundgz.1234567.com.cn
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+1:04:29 PM [vite] http proxy error: /js/018957.js?rt=1773637469851
+Error: getaddrinfo ENOTFOUND fundgz.1234567.com.cn
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26)
+2:57:29 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:01:10 PM [vite] hmr update /src/App.jsx, /src/index.css
+3:01:10 PM [vite] Internal server error: Failed to resolve import "./pages/FundDetail/index" from "src/App.jsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Applications/my-project/monenyShow/fund-dashboard/src/App.jsx:4:23
+  17 |  import { Routes, Route, HashRouter as Router } from "react-router";
+  18 |  import Home from "./pages/Home/index";
+  19 |  import FundDetail from "./pages/FundDetail/index";
+     |                          ^
+  20 |  function App() {
+  21 |    return /* @__PURE__ */ jsxDEV("div", { className: "min-h-screen", children: /* @__PURE__ */ jsxDEV(Router, { children: /* @__PURE__ */ jsxDEV(Routes, { children: [
+      at TransformPluginContext._formatError (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at async file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 5)
+      at async TransformPluginContext.transform (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+      at async viteTransformMiddleware (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:62106:24)
+3:02:12 PM [vite] page reload src/pages/FundDetail/components/DetailChart.jsx
+3:02:12 PM [vite] Internal server error: Failed to resolve import "./pages/FundDetail/index" from "src/App.jsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /Applications/my-project/monenyShow/fund-dashboard/src/App.jsx:4:23
+  17 |  import { Routes, Route, HashRouter as Router } from "react-router";
+  18 |  import Home from "./pages/Home/index";
+  19 |  import FundDetail from "./pages/FundDetail/index";
+     |                          ^
+  20 |  function App() {
+  21 |    return /* @__PURE__ */ jsxDEV("div", { className: "min-h-screen", children: /* @__PURE__ */ jsxDEV(Router, { children: /* @__PURE__ */ jsxDEV(Routes, { children: [
+      at TransformPluginContext._formatError (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41)
+      at TransformPluginContext.error (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16)
+      at normalizeUrl (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at async file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39
+      at async Promise.all (index 5)
+      at async TransformPluginContext.transform (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7)
+      at async PluginContainer.transform (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18)
+      at async loadAndTransform (file:///Applications/my-project/monenyShow/fund-dashboard/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27)
+3:02:12 PM [vite] Pre-transform error: Failed to resolve import "./pages/FundDetail/index" from "src/App.jsx". Does the file exist?
+3:02:47 PM [vite] page reload src/pages/FundDetail/index.jsx
+3:03:09 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:03:37 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:11:22 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:11:40 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:16:13 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:16:19 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:16:33 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:16:33 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:16:38 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:34:56 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:35:09 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:35:19 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:35:30 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:40:55 PM [vite] page reload tailwind.config.js
+3:41:00 PM [vite] page reload tailwind.config.js
+3:43:04 PM [vite] hmr update /src/index.css
+3:43:11 PM [vite] page reload index.html
+3:43:25 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:43:59 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:44:05 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:44:46 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:45:18 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:45:22 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:45:28 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:45:34 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:45:41 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:45:45 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:45:53 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:45:59 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:46:32 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:46:38 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:46:43 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:46:49 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:46:54 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:47:01 PM [vite] hmr update /src/pages/Home/components/FundChart.jsx, /src/index.css
+3:47:09 PM [vite] hmr update /src/pages/Home/components/FundChart.jsx, /src/index.css
+3:47:17 PM [vite] hmr update /src/pages/Home/components/FundChart.jsx, /src/index.css
+3:47:21 PM [vite] hmr update /src/pages/Home/components/FundChart.jsx, /src/index.css
+3:47:28 PM [vite] hmr update /src/pages/Home/components/FundChart.jsx, /src/index.css
+3:47:47 PM [vite] hmr update /src/pages/FundDetail/components/DetailChart.jsx, /src/index.css
+3:47:55 PM [vite] hmr update /src/pages/FundDetail/components/DetailChart.jsx, /src/index.css
+3:48:01 PM [vite] hmr update /src/pages/FundDetail/components/DetailChart.jsx, /src/index.css
+3:48:05 PM [vite] hmr update /src/pages/FundDetail/components/DetailChart.jsx, /src/index.css
+3:48:14 PM [vite] hmr update /src/App.jsx, /src/index.css
+3:49:48 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:49:52 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:49:56 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:50:01 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:50:07 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:50:11 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:50:16 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:50:22 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:50:26 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:50:31 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:50:31 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:50:38 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:50:44 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:50:48 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:50:54 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:51:00 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:51:05 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:51:11 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:51:17 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:51:40 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:51:48 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:51:53 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:52:06 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:52:15 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:52:21 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:52:27 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:52:33 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:52:40 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:52:45 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:52:50 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:52:50 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:52:56 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+3:53:02 PM [vite] hmr update /src/pages/Home/components/FundChart.jsx, /src/index.css
+3:53:06 PM [vite] hmr update /src/pages/Home/components/FundChart.jsx, /src/index.css
+3:53:11 PM [vite] hmr update /src/pages/Home/components/FundChart.jsx, /src/index.css
+3:53:16 PM [vite] hmr update /src/pages/FundDetail/components/DetailChart.jsx, /src/index.css
+3:53:50 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:54:52 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:55:57 PM [vite] hmr update /src/App.jsx, /src/index.css
+3:56:02 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:56:06 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:56:10 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:56:14 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+3:56:22 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:56:27 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:56:31 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:56:35 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+3:56:45 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:56:54 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+3:57:22 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+4:03:08 PM [vite] vite.config.js changed, restarting server...
+4:03:08 PM [vite] server restarted.
+4:03:19 PM [vite] page reload tailwind.config.js
+4:03:38 PM [vite] page reload index.html
+4:03:44 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+4:03:44 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+4:03:46 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+4:03:47 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+4:03:48 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+4:03:48 PM [vite] hmr update /src/pages/Home/components/FundChart.jsx, /src/index.css
+4:03:49 PM [vite] hmr update /src/pages/FundDetail/components/DetailChart.jsx, /src/index.css
+4:03:49 PM [vite] hmr update /src/App.jsx, /src/index.css
+8:09:08 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:20:25 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:20:36 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:21:20 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:21:52 PM [vite] hmr update /src/index.css
+5:29:40 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:32:48 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:33:06 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:33:17 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:34:41 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:35:30 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:35:36 PM [vite] hmr update /src/index.css
+5:36:29 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:37:40 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:38:47 PM [vite] hmr update /src/components/ThemeToggle.jsx, /src/index.css
+5:38:52 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:40:42 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+5:41:32 PM [vite] hmr update /src/index.css
+5:41:34 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+5:41:34 PM [vite] hmr update /src/components/ThemeToggle.jsx, /src/index.css
+5:41:41 PM [vite] hmr update /src/pages/Home/components/FundList.jsx, /src/index.css
+6:38:50 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+6:39:33 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+6:39:40 PM [vite] hmr update /src/index.css
+6:42:12 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+6:42:28 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+6:45:06 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+6:45:12 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+6:45:21 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+6:48:09 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+6:48:16 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+6:48:29 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+6:48:56 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
+7:00:44 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+7:00:57 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+7:02:26 PM [vite] hmr update /src/index.css
+7:02:29 PM [vite] hmr update /src/pages/Home/components/RealtimeBoard.jsx, /src/index.css
+7:02:32 PM [vite] hmr update /src/pages/Home/index.jsx, /src/index.css
+7:02:37 PM [vite] hmr update /src/pages/FundDetail/index.jsx, /src/index.css
