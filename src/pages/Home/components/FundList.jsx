@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { Plus, Trash2, TrendingUp, Search, Loader2, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { searchFunds, getFundHistory } from '@utils/fundApi'
+import { searchFunds } from '@utils/fundApi'
 
 export default function FundList({ funds, onAddFund, onRemoveFund }) {
     const navigate = useNavigate()
@@ -46,25 +46,16 @@ export default function FundList({ funds, onAddFund, onRemoveFund }) {
     const handleAddFund = async fund => {
         setAdding(fund.code)
         try {
-            const { dailyChange, history } = await getFundHistory(fund.code)
-            const newFund = {
-                ...fund,
-                id: Date.now(),
-                dailyChange,
-                history,
-            }
-            onAddFund(newFund)
-            setSearchText('')
-            setShowDropdown(false)
-            setSuggestions([])
-        } catch {
-            // 获取失败时仍添加，使用空数据
+            // 仅添加元数据，history / dailyChange 由首页统一拉取
             onAddFund({
                 ...fund,
                 id: Date.now(),
                 dailyChange: '--',
                 history: [],
             })
+            setSearchText('')
+            setShowDropdown(false)
+            setSuggestions([])
         } finally {
             setAdding(null)
         }

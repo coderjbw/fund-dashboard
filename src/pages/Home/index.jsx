@@ -6,13 +6,21 @@ import FundChart from './components/FundChart'
 import RealtimeBoard from './components/RealtimeBoard'
 import InvestAdvice from './components/InvestAdvice'
 import ThemeToggle from '@/components/ThemeToggle'
-import { batchGetRealtimeEstimates } from '@utils/fundApi'
+import { batchGetRealtimeEstimates, getFundHistory } from '@utils/fundApi'
 import { isTradeTime } from '@utils/tradeTime'
 
 const POLL_INTERVAL = 60000 // 60 秒
 const STORAGE_KEY = 'fund-realtime-history'
 const FUNDS_STORAGE_KEY = 'fund-selected-list'
 const MOBILE_BREAKPOINT = 768 // 移动端断点
+
+const RANGE_DAYS = { '1m': 30, '3m': 90 }
+
+// 持久化时仅保留元数据，history / dailyChange 每次进入页面重新拉取
+function persistFunds(list) {
+    const meta = list.map(({ id, code, name, type }) => ({ id, code, name, type }))
+    localStorage.setItem(FUNDS_STORAGE_KEY, JSON.stringify(meta))
+}
 
 // 从 localStorage 恢复当日数据
 function loadRealtimeHistory() {
@@ -42,12 +50,16 @@ export default function Home() {
     const [funds, setFunds] = useState(() => {
         try {
             const raw = localStorage.getItem(FUNDS_STORAGE_KEY)
-            return raw ? JSON.parse(raw) : []
+            const list = raw ? JSON.parse(raw) : []
+            // 不信任已持久化的 history / dailyChange，初始化为空，由副作用刷新
+            return list.map(f => ({ ...f, dailyChange: '--', history: [] }))
         } catch {
             return []
         }
     })
     const [activeTab, setActiveTab] = useState('history')
+    const [historyRange, setHistoryRange] = useState('1m')
+    const [historyLoading, setHistoryLoading] = useState(false)
 
     const [realtimeData, setRealtimeData] = useState([])
     const [realtimeHistory, setRealtimeHistory] = useState(loadRealtimeHistory)
@@ -86,7 +98,7 @@ export default function Home() {
     const handleAddFund = fund => {
         setFunds(prev => {
             const next = [...prev, fund]
-            localStorage.setItem(FUNDS_STORAGE_KEY, JSON.stringify(next))
+            persistFunds(next)
             return next
         })
     }
@@ -104,10 +116,41 @@ export default function Home() {
                 setRealtimeData(d => d.filter(r => r.code !== removed.code))
             }
             const next = prev.filter(f => f.id !== id)
-            localStorage.setItem(FUNDS_STORAGE_KEY, JSON.stringify(next))
+            persistFunds(next)
             return next
         })
     }
+
+    // 统一刷新所有自选基金的历史涨幅
+    const fundCodesKey = funds.map(f => f.code).join(',')
+    useEffect(() => {
+        if (funds.length === 0) return
+        let cancelled = false
+        const days = RANGE_DAYS[historyRange] || 30
+        setHistoryLoading(true)
+        Promise.all(
+            funds.map(f =>
+                getFundHistory(f.code, days)
+                    .then(r => ({ code: f.code, ...r }))
+                    .catch(() => ({ code: f.code, dailyChange: '--', history: [] }))
+            )
+        ).then(results => {
+            if (cancelled) return
+            const map = new Map(results.map(r => [r.code, r]))
+            setFunds(prev =>
+                prev.map(f => {
+                    const r = map.get(f.code)
+                    return r ? { ...f, dailyChange: r.dailyChange, history: r.history } : f
+                })
+            )
+            setHistoryLoading(false)
+        })
+        return () => {
+            cancelled = true
+        }
+        // 依赖基金代码集合 + 区间
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fundCodesKey, historyRange])
 
     const fetchRealtime = useCallback(async () => {
         if (funds.length === 0) return
@@ -338,7 +381,13 @@ export default function Home() {
 
                         <div className="flex-1 min-h-0">
                             {activeTab === 'history' ? (
-                                <FundChart funds={funds} isLandscape={isLandscape && isMobile} />
+                                <FundChart
+                                    funds={funds}
+                                    isLandscape={isLandscape && isMobile}
+                                    range={historyRange}
+                                    onRangeChange={setHistoryRange}
+                                    loading={historyLoading}
+                                />
                             ) : (
                                 <RealtimeBoard
                                     funds={funds}

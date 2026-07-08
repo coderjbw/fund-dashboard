@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BarChart3 } from 'lucide-react'
+import { BarChart3, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ReactEChartsCore from 'echarts-for-react/lib/core'
 import * as echarts from 'echarts/core'
@@ -21,8 +21,9 @@ const COLOR_PALETTE = [
     '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#6366f1',
 ]
 
-export default function FundChart({ funds }) {
+export default function FundChart({ funds, range = '1m', onRangeChange, loading = false }) {
     const [, , isDark] = useTheme()
+    const rangeDays = range === '3m' ? 90 : 30
 
     const option = useMemo(() => {
         if (funds.length === 0) return null
@@ -134,53 +135,79 @@ export default function FundChart({ funds }) {
             <div className="flex items-center gap-2 mb-5">
                 <BarChart3 className="w-5 h-5 text-primary-600" />
                 <h2 className="text-lg font-bold text-foreground">涨幅走势</h2>
-                <span className="ml-auto text-xs text-muted-foreground">
-                    近 30 日每日涨幅 (%)
+                {loading && <Loader2 className="w-4 h-4 animate-spin text-primary-500" />}
+                <span className="hidden sm:inline text-xs text-muted-foreground">
+                    近 {rangeDays} 日每日涨幅 (%)
                 </span>
+                <div className="ml-auto flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                    {[
+                        { k: '1m', label: '一个月' },
+                        { k: '3m', label: '三个月' },
+                    ].map(opt => {
+                        const active = range === opt.k
+                        return (
+                            <button
+                                key={opt.k}
+                                onClick={() => onRangeChange?.(opt.k)}
+                                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                                    active
+                                        ? 'bg-white dark:bg-slate-800 text-primary-700 dark:text-primary-400 shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        )
+                    })}
+                </div>
             </div>
 
             {/* 统计卡片 */}
-            {funds.length > 0 && (
-                <div className="grid grid-cols-3 gap-3 mb-5">
-                    {[
-                        {
-                            label: '平均涨幅',
-                            value: (
-                                funds.reduce((sum, f) => sum + parseFloat(f.dailyChange), 0)
-                                / funds.length
-                            ).toFixed(2),
-                            suffix: '%',
-                        },
-                        {
-                            label: '最高涨幅',
-                            value: Math.max(...funds.map(f => parseFloat(f.dailyChange))).toFixed(2),
-                            suffix: '%',
-                        },
-                        {
-                            label: '最低涨幅',
-                            value: Math.min(...funds.map(f => parseFloat(f.dailyChange))).toFixed(2),
-                            suffix: '%',
-                        },
-                    ].map((stat, i) => (
-                        <motion.div
-                            key={stat.label}
-                            initial={{opacity: 0, y: 10}}
-                            animate={{opacity: 1, y: 0}}
-                            transition={{delay: i * 0.1}}
-                            className="bg-muted rounded-xl p-3 text-center"
-                        >
-                            <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
-                            <p className={`text-lg font-bold ${
-                                parseFloat(stat.value) >= 0
-                                    ? 'text-red-600 dark:text-red-400'
-                                    : 'text-secondary-600 dark:text-secondary-400'
-                            }`}>
-                                {parseFloat(stat.value) >= 0 ? '+' : ''}{stat.value}{stat.suffix}
-                            </p>
-                        </motion.div>
-                    ))}
-                </div>
-            )}
+            {funds.length > 0 && (() => {
+                const valid = funds
+                    .map(f => parseFloat(f.dailyChange))
+                    .filter(n => !isNaN(n))
+                if (valid.length === 0) return null
+                const stats = [
+                    {
+                        label: '平均涨幅',
+                        value: (valid.reduce((s, n) => s + n, 0) / valid.length).toFixed(2),
+                        suffix: '%',
+                    },
+                    {
+                        label: '最高涨幅',
+                        value: Math.max(...valid).toFixed(2),
+                        suffix: '%',
+                    },
+                    {
+                        label: '最低涨幅',
+                        value: Math.min(...valid).toFixed(2),
+                        suffix: '%',
+                    },
+                ]
+                return (
+                    <div className="grid grid-cols-3 gap-3 mb-5">
+                        {stats.map((stat, i) => (
+                            <motion.div
+                                key={stat.label}
+                                initial={{opacity: 0, y: 10}}
+                                animate={{opacity: 1, y: 0}}
+                                transition={{delay: i * 0.1}}
+                                className="bg-muted rounded-xl p-3 text-center"
+                            >
+                                <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
+                                <p className={`text-lg font-bold ${
+                                    parseFloat(stat.value) >= 0
+                                        ? 'text-red-600 dark:text-red-400'
+                                        : 'text-secondary-600 dark:text-secondary-400'
+                                }`}>
+                                    {parseFloat(stat.value) >= 0 ? '+' : ''}{stat.value}{stat.suffix}
+                                </p>
+                            </motion.div>
+                        ))}
+                    </div>
+                )
+            })()}
 
             {/* 图表区域 */}
             <div className="flex-1 min-h-0">

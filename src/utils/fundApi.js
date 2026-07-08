@@ -25,33 +25,47 @@ export async function searchFunds(keyword) {
 /**
  * 获取基金历史净值（含每日涨跌幅）
  * @param {string} fundCode - 基金代码
- * @param {number} pageSize - 获取天数（默认 31 天，多取一天用于计算）
+ * @param {number} days - 自然日窗口（30 / 90），返回该窗口内所有交易日数据
  * @returns {Promise<{dailyChange: string, history: Array<{date: string, value: number}>}>}
  */
-export async function getFundHistory(fundCode, pageSize = 31) {
-    const res = await fetch(
-        `/api/fund-history?fundCode=${fundCode}&pageIndex=1&pageSize=${pageSize}`
-    )
-    const data = await res.json()
+export async function getFundHistory(fundCode, days = 30) {
+    const today = new Date()
+    const endDate = today.toISOString().slice(0, 10)
+    const startObj = new Date(today)
+    startObj.setDate(startObj.getDate() - days)
+    const startDate = startObj.toISOString().slice(0, 10)
 
-    const list = data.Data?.LSJZList || []
+    const PAGE = 20 // 服务端单页硬上限
+    let collected = []
+    let total = Infinity
 
-    if (list.length === 0) {
-        return {dailyChange: '0.00', history: []}
+    for (let i = 1; collected.length < total; i++) {
+        const res = await fetch(
+            `/api/fund-history?fundCode=${fundCode}&pageIndex=${i}&pageSize=${PAGE}&startDate=${startDate}&endDate=${endDate}&_t=${Date.now()}`
+        )
+        const data = await res.json()
+        const list = data.Data?.LSJZList || []
+        if (typeof data.TotalCount === 'number') total = data.TotalCount
+        if (list.length === 0) break
+        collected = collected.concat(list)
+        if (list.length < PAGE) break
     }
 
-    // API 返回按日期倒序，反转为正序
-    const reversed = [...list].reverse()
+    if (collected.length === 0) {
+        return { dailyChange: '0.00', history: [] }
+    }
+
+    // API 倒序返回（最新在前），反转为正序
+    const reversed = [...collected].reverse()
 
     const history = reversed.map(item => ({
         date: formatDate(item.FSRQ),
         value: parseFloat(item.JZZZL) || 0,
     }))
 
-    // 最新一天的涨跌幅
-    const dailyChange = list[0].JZZZL || '0.00'
+    const dailyChange = collected[0].JZZZL || '0.00'
 
-    return {dailyChange, history}
+    return { dailyChange, history }
 }
 
 /**
