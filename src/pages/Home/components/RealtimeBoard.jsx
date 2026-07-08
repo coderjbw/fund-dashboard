@@ -187,6 +187,10 @@ export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, la
                                 const change = parseFloat(item.estimatedChange)
                                 const isUp = change >= 0
                                 const points = realtimeHistory[item.code] || []
+                                const isStale = !!item.stale
+                                const staleDate = isStale && typeof item.lastNavDate === 'string'
+                                    ? item.lastNavDate.slice(5).replace('-', '/')
+                                    : ''
                                 return (
                                     <motion.div
                                         key={item.code}
@@ -201,14 +205,24 @@ export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, la
                                                 : 'bg-green-50/60 dark:bg-green-950/30 border-green-100 dark:border-green-900/40 hover:border-green-200 dark:hover:border-green-800'
                                         }`}
                                     >
-                                        <div className="flex items-start justify-between mb-1">
-                                            <p className="text-xs font-medium text-foreground line-clamp-2 flex-1 mr-1 leading-tight">
+                                        <div className="flex items-start justify-between mb-1 gap-1">
+                                            <p className="text-xs font-medium text-foreground line-clamp-2 flex-1 leading-tight">
                                                 {item.name}
                                             </p>
-                                            {isUp
-                                                ? <TrendingUp className="w-3.5 h-3.5 text-red-500 flex-none" />
-                                                : <TrendingDown className="w-3.5 h-3.5 text-secondary-500 flex-none" />
-                                            }
+                                            <div className="flex items-center gap-1 flex-none">
+                                                {isStale && (
+                                                    <span
+                                                        title={`已披露净值 ${item.lastNavDate || ''}，非盘中估值（如 QDII / 停牌）`}
+                                                        className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 leading-none"
+                                                    >
+                                                        日频
+                                                    </span>
+                                                )}
+                                                {isUp
+                                                    ? <TrendingUp className="w-3.5 h-3.5 text-red-500" />
+                                                    : <TrendingDown className="w-3.5 h-3.5 text-secondary-500" />
+                                                }
+                                            </div>
                                         </div>
                                         <p className={`text-lg md:text-xl font-bold ${
                                             isUp
@@ -218,8 +232,8 @@ export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, la
                                             {isUp ? '+' : ''}{item.estimatedChange}%
                                         </p>
                                         <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
-                                            <span>估算 {item.estimatedNav}</span>
-                                            <span>{points.length} 点</span>
+                                            <span>{isStale ? '净值' : '估算'} {item.estimatedNav}</span>
+                                            <span>{isStale ? staleDate : `${points.length} 点`}</span>
                                         </div>
                                     </motion.div>
                                 )
