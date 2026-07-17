@@ -35,6 +35,31 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: p => p.replace(/^\/api\/fund-realtime/, '/js'),
       },
+      '/api/fund-holdings': {
+        target: 'https://fundf10.eastmoney.com',
+        changeOrigin: true,
+        rewrite: p => {
+          // /api/fund-holdings/{code} -> /FundArchivesDatas.aspx?type=jjcc&code={code}&topline=10
+          const m = p.match(/^\/api\/fund-holdings\/([^/?#]+)/)
+          const code = m ? m[1] : ''
+          return `/FundArchivesDatas.aspx?type=jjcc&code=${code}&topline=10`
+        },
+        headers: {
+          Referer: 'https://fundf10.eastmoney.com/',
+        },
+      },
+      '/api/fund-pingzhong': {
+        target: 'https://fund.eastmoney.com',
+        changeOrigin: true,
+        rewrite: p => {
+          const m = p.match(/^\/api\/fund-pingzhong\/([^/?#]+)/)
+          const code = m ? m[1] : ''
+          return `/pingzhongdata/${code}.js`
+        },
+        headers: {
+          Referer: 'https://fund.eastmoney.com/',
+        },
+      },
 
     },
   }

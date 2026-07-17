@@ -65,6 +65,54 @@ app.get('/api/fund-history', async (req, res) => {
     }
 })
 
+// 基金持仓明细（前十大重仓股 HTML）
+app.get('/api/fund-holdings/:code', async (req, res) => {
+    try {
+        const url = `https://fundf10.eastmoney.com/FundArchivesDatas.aspx?type=jjcc&code=${req.params.code}&topline=10`
+        console.log(`[Proxy] fund-holdings -> ${url}`)
+
+        const response = await fetch(url, {
+            headers: {
+                ...commonHeaders,
+                'Referer': 'https://fundf10.eastmoney.com/',
+            },
+        })
+
+        const data = await response.text()
+        console.log(`[Proxy] fund-holdings <- ${response.status}, ${data.length} bytes`)
+
+        res.set('Content-Type', 'application/javascript; charset=utf-8')
+        res.send(data)
+    } catch (err) {
+        console.error('[Proxy Error] fund-holdings:', err.message)
+        res.status(502).json({ error: err.message })
+    }
+})
+
+// 基金基础数据（pingzhongdata，含资产配置）
+app.get('/api/fund-pingzhong/:code', async (req, res) => {
+    try {
+        const url = `https://fund.eastmoney.com/pingzhongdata/${req.params.code}.js`
+        console.log(`[Proxy] fund-pingzhong -> ${url}`)
+
+        const response = await fetch(url, {
+            headers: {
+                ...commonHeaders,
+                'Referer': 'https://fund.eastmoney.com/',
+            },
+        })
+
+        const data = await response.text()
+        console.log(`[Proxy] fund-pingzhong <- ${response.status}, ${data.length} bytes`)
+
+        res.set('Content-Type', 'application/javascript; charset=utf-8')
+        res.send(data)
+    } catch (err) {
+        console.error('[Proxy Error] fund-pingzhong:', err.message)
+        res.status(502).json({ error: err.message })
+    }
+})
+
 // 实时估值
 app.get('/api/fund-realtime/:code', async (req, res) => {
     try {

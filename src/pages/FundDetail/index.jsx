@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { motion } from 'framer-motion'
 import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw, Clock, Database } from 'lucide-react'
-import { getRealtimeEstimate } from '@utils/fundApi'
+import { getRealtimeEstimate, getFundHoldings } from '@utils/fundApi'
 import { isTradeTime } from '@utils/tradeTime'
 import ThemeToggle from '@/components/ThemeToggle'
 import DetailChart from './components/DetailChart'
+import Holdings from './components/Holdings'
 
 const POLL_INTERVAL = 60000
 const STORAGE_KEY = 'fund-realtime-history'
@@ -66,6 +67,8 @@ export default function FundDetail() {
     const [estimate, setEstimate] = useState(null)
     const [realtimeHistory, setRealtimeHistory] = useState(loadRealtimeHistory)
     const [loading, setLoading] = useState(false)
+    const [holdings, setHoldings] = useState(null)
+    const [holdingsLoading, setHoldingsLoading] = useState(false)
     const pollRef = useRef(null)
 
     const fetchData = useCallback(async () => {
@@ -121,6 +124,18 @@ export default function FundDetail() {
         }
         return () => { if (pollRef.current) clearInterval(pollRef.current) }
     }, [fetchData])
+
+    // 拉取持仓明细（仅在 code 变化时拉一次）
+    useEffect(() => {
+        let cancelled = false
+        setHoldingsLoading(true)
+        setHoldings(null)
+        getFundHoldings(code)
+            .then(data => { if (!cancelled) setHoldings(data) })
+            .catch(() => { if (!cancelled) setHoldings(null) })
+            .finally(() => { if (!cancelled) setHoldingsLoading(false) })
+        return () => { cancelled = true }
+    }, [code])
 
     const change = estimate ? parseFloat(estimate.estimatedChange) : NaN
     const isUp = !isNaN(change) && change >= 0
@@ -237,6 +252,9 @@ export default function FundDetail() {
                             <DetailChart fund={fund} realtimeHistory={realtimeHistory} />
                         </div>
                     </motion.div>
+
+                    {/* 持仓明细 */}
+                    <Holdings holdings={holdings} loading={holdingsLoading} />
                 </div>
             </main>
         </div>

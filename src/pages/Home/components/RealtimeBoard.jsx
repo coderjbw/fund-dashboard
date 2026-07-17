@@ -145,6 +145,13 @@ export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, la
         }
     }, [funds, realtimeHistory, isDark])
 
+    // 基金代码 -> 已保存名称（用于兜底：实时接口部分基金返回空 name）
+    const fundNameMap = useMemo(() => {
+        const m = {}
+        funds.forEach(f => { if (f.code) m[f.code] = f.name })
+        return m
+    }, [funds])
+
     // 按涨幅排序的实时数据
     const sortedRealtime = useMemo(() => {
         if (!realtimeData || realtimeData.length === 0) return []
@@ -207,7 +214,7 @@ export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, la
                                     >
                                         <div className="flex items-start justify-between mb-1 gap-1">
                                             <p className="text-xs font-medium text-foreground line-clamp-2 flex-1 leading-tight">
-                                                {item.name}
+                                                {item.name || fundNameMap[item.code] || item.code}
                                             </p>
                                             <div className="flex items-center gap-1 flex-none">
                                                 {isStale && (

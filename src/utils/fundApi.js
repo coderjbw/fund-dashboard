@@ -152,3 +152,129 @@ function formatDate(dateStr) {
     const d = new Date(dateStr)
     return `${d.getMonth() + 1}/${d.getDate()}`
 }
+
+/**
+ * 从 jjcc HTML 中解析前十大重仓股。
+ * jjcc 返回形如 `var apidata={ content:"<html...>", arryear:[...], curyear:2026 };`
+ * 空持仓时 content 为空字符串。
+ *
+ * 兼容两种表格样式：
+ * - A股：td 有 class='tol' / 'tor'，代码/名称包含在 <a> 中，代码为 6 位数字
+ * - QDII/HK/US：td 使用 class='toc'，代码可能是 4-5 位或字母（如 2330 / TSM / 005930），
+ *   部分非中概股用 <span> 包裹，无 <a>
+ * 为了兼容，按 <td> 位置解析：
+ *   0=序号 1=股票代码 2=股票名称 3=最新价 4=涨跌幅 5=相关资讯 6=占净值比例 7=持股数 8=持仓市值
+ */
+function parseHoldingsHTML(content) {
+    if (!content) return { stocks: [], reportDate: '', quarter: '' }
+    // 反转义（服务端已经反转义了大部分，但保险再做一次）
+    const html = content
+        .replace(/\\"/g, '"')
+        .replace(/\\\//g, '/')
+        .replace(/\\n/g, '\n')
+
+    const quarterMatch = html.match(/(\d{4})年(\d)季度股票投资明细/)
+    const quarter = quarterMatch ? `${quarterMatch[1]} Q${quarterMatch[2]}` : ''
+
+    const dateMatch = html.match(/截止至：<font[^>]*>([\d-]+)<\/font>/)
+    const reportDate = dateMatch ? dateMatch[1] : ''
+
+    // 提取 tbody 内每一行
+    const rowRe = /<tr>([\s\S]*?)<\/tr>/g
+    const stocks = []
+    let m
+    while ((m = rowRe.exec(html)) !== null) {
+        const row = m[1]
+        // 跳过表头
+        if (/<th[\s>]/.test(row)) continue
+
+        // 按顺序抽取所有 td 的纯文本内容
+        const tds = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(x => {
+            // 去掉标签，压缩空白
+            return x[1].replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim()
+        })
+
+        // 至少 9 列
+        if (tds.length < 9) continue
+        const code = tds[1]
+        const name = tds[2]
+        const weight = tds[6]
+        const shares = tds[7]
+        const marketValue = tds[8]
+
+        // 基础校验：代码非空、名称非空、比例形如 xx.xx%
+        if (!code || !name || !/%$/.test(weight)) continue
+
+        stocks.push({ code, name, weight, shares, marketValue })
+    }
+    return { stocks, reportDate, quarter }
+}
+
+/**
+ * 从 pingzhongdata 文本中提取 Data_assetAllocation。
+ * 结构：
+ *   {"series":[{"name":"股票占净比","data":[...]},{"name":"债券占净比",...},{"name":"现金占净比",...},{"name":"净资产","data":[...]}],
+ *    "categories":["2025-06-30",...]}
+ * 只取最新一期。
+ */
+function parseAssetAllocation(text) {
+    if (!text) return null
+    const m = text.match(/var Data_assetAllocation\s*=\s*(\{[\s\S]*?\});/)
+    if (!m) return null
+    let obj
+    try {
+        obj = JSON.parse(m[1])
+    } catch {
+        return null
+    }
+    const cats = Array.isArray(obj?.categories) ? obj.categories : []
+    const idx = cats.length - 1
+    if (idx < 0) return null
+
+    const pick = (name) => {
+        const s = obj.series?.find(x => x.name === name)
+        const v = s?.data?.[idx]
+        return typeof v === 'number' ? v : null
+    }
+
+    return {
+        date: cats[idx],
+        stock: pick('股票占净比'),
+        bond: pick('债券占净比'),
+        cash: pick('现金占净比'),
+        netAsset: pick('净资产'), // 亿元
+    }
+}
+
+/**
+ * 获取基金持仓明细
+ * @param {string} fundCode
+ * @returns {Promise<{stocks: Array, reportDate: string, quarter: string, assetAlloc: {date, stock, bond, cash, netAsset}|null}>}
+ */
+export async function getFundHoldings(fundCode) {
+    const [holdingsRes, pzRes] = await Promise.allSettled([
+        fetch(`/api/fund-holdings/${fundCode}?_t=${Date.now()}`).then(r => r.text()),
+        fetch(`/api/fund-pingzhong/${fundCode}?_t=${Date.now()}`).then(r => r.text()),
+    ])
+
+    // 解析持仓
+    let stocks = [], reportDate = '', quarter = ''
+    if (holdingsRes.status === 'fulfilled') {
+        const text = holdingsRes.value
+        // 提取 content 字段
+        const contentMatch = text.match(/content\s*:\s*"([\s\S]*?)"\s*,\s*arryear/)
+        const content = contentMatch ? contentMatch[1] : ''
+        const parsed = parseHoldingsHTML(content)
+        stocks = parsed.stocks
+        reportDate = parsed.reportDate
+        quarter = parsed.quarter
+    }
+
+    // 解析资产配置
+    let assetAlloc = null
+    if (pzRes.status === 'fulfilled') {
+        assetAlloc = parseAssetAllocation(pzRes.value)
+    }
+
+    return { stocks, reportDate, quarter, assetAlloc }
+}
