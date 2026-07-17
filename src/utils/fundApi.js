@@ -10,7 +10,7 @@
 export async function searchFunds(keyword) {
     if (!keyword || keyword.trim().length === 0) return []
 
-    const res = await fetch(`/api/fund-search?m=1&key=${encodeURIComponent(keyword)}`)
+    const res = await fetch(`./api/fund-search?m=1&key=${encodeURIComponent(keyword)}`)
     const data = await res.json()
 
     if (!data.Datas || data.Datas.length === 0) return []
@@ -41,7 +41,7 @@ export async function getFundHistory(fundCode, days = 30) {
 
     for (let i = 1; collected.length < total; i++) {
         const res = await fetch(
-            `/api/fund-history?fundCode=${fundCode}&pageIndex=${i}&pageSize=${PAGE}&startDate=${startDate}&endDate=${endDate}&_t=${Date.now()}`
+            `./api/fund-history?fundCode=${fundCode}&pageIndex=${i}&pageSize=${PAGE}&startDate=${startDate}&endDate=${endDate}&_t=${Date.now()}`
         )
         const data = await res.json()
         const list = data.Data?.LSJZList || []
@@ -74,7 +74,7 @@ export async function getFundHistory(fundCode, days = 30) {
  * @returns {Promise<{code, name, estimatedNav, estimatedChange, lastNav, lastNavDate, updateTime, stale?: boolean}>}
  */
 export async function getRealtimeEstimate(fundCode) {
-    const res = await fetch(`/api/fund-realtime/${fundCode}.js?rt=${Date.now()}`)
+    const res = await fetch(`./api/fund-realtime/${fundCode}.js?rt=${Date.now()}`)
     const text = await res.text()
     // 响应格式为 JSONP：jsonpgz({...});  部分基金（如 QDII）可能返回空串
     const json = text.replace(/^jsonpgz\(/, '').replace(/\);?\s*$/, '').trim()
@@ -92,7 +92,7 @@ export async function getRealtimeEstimate(fundCode) {
     if (!data || !data.gszzl || gzDate !== today) {
         try {
             const histRes = await fetch(
-                `/api/fund-history?fundCode=${fundCode}&pageIndex=1&pageSize=1&_t=${Date.now()}`
+                `./api/fund-history?fundCode=${fundCode}&pageIndex=1&pageSize=1&_t=${Date.now()}`
             )
             const histData = await histRes.json()
             const latest = histData?.Data?.LSJZList?.[0]
@@ -253,8 +253,8 @@ function parseAssetAllocation(text) {
  */
 export async function getFundHoldings(fundCode) {
     const [holdingsRes, pzRes] = await Promise.allSettled([
-        fetch(`/api/fund-holdings/${fundCode}?_t=${Date.now()}`).then(r => r.text()),
-        fetch(`/api/fund-pingzhong/${fundCode}?_t=${Date.now()}`).then(r => r.text()),
+        fetch(`./api/fund-holdings/${fundCode}?_t=${Date.now()}`).then(r => r.text()),
+        fetch(`./api/fund-pingzhong/${fundCode}?_t=${Date.now()}`).then(r => r.text()),
     ])
 
     // 解析持仓
