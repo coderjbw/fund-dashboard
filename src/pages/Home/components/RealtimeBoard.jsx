@@ -195,6 +195,8 @@ export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, la
                                 const isUp = change >= 0
                                 const points = realtimeHistory[item.code] || []
                                 const isStale = !!item.stale
+                                const isOnMarket = !!item.onMarket
+                                const isDIY = !!item.diyEstimate
                                 const staleDate = isStale && typeof item.lastNavDate === 'string'
                                     ? item.lastNavDate.slice(5).replace('-', '/')
                                     : ''
@@ -225,6 +227,22 @@ export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, la
                                                         日频
                                                     </span>
                                                 )}
+                                                {isOnMarket && (
+                                                    <span
+                                                        title={`场内 ETF/LOF 二级市场实时成交价（${item.market || ''}）`}
+                                                        className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 leading-none"
+                                                    >
+                                                        场内
+                                                    </span>
+                                                )}
+                                                {isDIY && (
+                                                    <span
+                                                        title={`基于十大重仓 × A 股实时行情本地估算，覆盖${item.coveredWeight ?? '--'}% 净值，剩余按 0，日均偏差 ~0.1-0.3%`}
+                                                        className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-200 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 leading-none"
+                                                    >
+                                                        估算
+                                                    </span>
+                                                )}
                                                 {isUp
                                                     ? <TrendingUp className="w-3.5 h-3.5 text-red-500" />
                                                     : <TrendingDown className="w-3.5 h-3.5 text-secondary-500" />
@@ -239,8 +257,8 @@ export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, la
                                             {isUp ? '+' : ''}{item.estimatedChange}%
                                         </p>
                                         <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
-                                            <span>{isStale ? '净值' : '估算'} {item.estimatedNav}</span>
-                                            <span>{isStale ? staleDate : `${points.length} 点`}</span>
+                                            <span>{isStale ? '净值' : (isOnMarket ? '现价' : '估算')} {item.estimatedNav}</span>
+                                            <span>{isStale ? staleDate : (isDIY ? `覆盖 ${item.coveredWeight ?? '--'}%` : `${points.length} 点`)}</span>
                                         </div>
                                     </motion.div>
                                 )

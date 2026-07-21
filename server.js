@@ -13,6 +13,22 @@ const commonHeaders = {
     'Accept-Language': 'zh-CN,zh;q=0.9',
 }
 
+// 对上游做重试，吸收 push2 偶发的 "fetch failed"/"empty reply"
+async function fetchWithRetry(url, options, retries = 3, baseBackoffMs = 150) {
+    let lastErr
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await fetch(url, options)
+        } catch (e) {
+            lastErr = e
+            if (i < retries - 1) {
+                await new Promise(r => setTimeout(r, baseBackoffMs * (i + 1)))
+            }
+        }
+    }
+    throw lastErr
+}
+
 // ========== API 代理（使用原生 fetch）==========
 
 // 基金搜索
@@ -111,6 +127,39 @@ app.get('/api/fund-pingzhong/:code', async (req, res) => {
         console.error('[Proxy Error] fund-pingzhong:', err.message)
         res.status(502).json({ error: err.message })
     }
+})
+
+// 场内 ETF/LOF 实时行情（push2 二级市场成交价）
+// query: ?secids=1.510300,0.159949
+// 主 host push2.eastmoney.com 偶尔"empty reply"（IP 限流/短时封禁），
+// 用 push2delay.eastmoney.com 作 fallback（15 分钟延迟版，收盘后差别不大）
+const PUSH2_HOSTS = ['push2.eastmoney.com', 'push2delay.eastmoney.com']
+
+app.get('/api/push2-quote', async (req, res) => {
+    const queryString = req.url.includes('?') ? req.url.split('?')[1] : ''
+    const suffix = `?fltt=2&fields=f2,f3,f12,f13,f14,f18,f124&ut=fa5fd1943c7b386f172d6893dbfba10b&${queryString}`
+    let lastErr
+    for (const host of PUSH2_HOSTS) {
+        const url = `https://${host}/api/qt/ulist.np/get${suffix}`
+        try {
+            const response = await fetchWithRetry(url, {
+                headers: {
+                    ...commonHeaders,
+                    'Referer': 'https://quote.eastmoney.com/',
+                },
+            }, 2, 120)
+            const data = await response.text()
+            console.log(`[Proxy] push2-quote via ${host} <- ${response.status}, ${data.length} bytes`)
+            res.set('Content-Type', response.headers.get('content-type') || 'application/json')
+            res.send(data)
+            return
+        } catch (err) {
+            lastErr = err
+            console.warn(`[Proxy] push2-quote ${host} failed: ${err.message}`)
+        }
+    }
+    console.error('[Proxy Error] push2-quote all hosts failed:', lastErr?.message)
+    res.status(502).json({ error: lastErr?.message || 'push2 all hosts failed' })
 })
 
 // 实时估值

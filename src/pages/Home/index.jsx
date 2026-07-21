@@ -158,7 +158,17 @@ export default function Home() {
         try {
             const codes = funds.map(f => f.code)
             const results = await batchGetRealtimeEstimates(codes)
-            setRealtimeData(results)
+            // 保留上一次非 stale 的数据：当本次某只基金因为 push2 瞬时失败退回 stale 时，
+            // 不覆盖上一次的实时结果，避免视觉上闪一下「日频」
+            setRealtimeData(prev => {
+                const prevMap = new Map(prev.map(x => [x.code, x]))
+                return results.map(r => {
+                    if (r.stale && prevMap.has(r.code) && !prevMap.get(r.code).stale) {
+                        return prevMap.get(r.code)
+                    }
+                    return r
+                })
+            })
 
             // 取 API 返回的日期和时间
             const apiDatetime = results[0]?.updateTime || ''

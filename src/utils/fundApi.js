@@ -71,7 +71,7 @@ export async function getFundHistory(fundCode, days = 30) {
 /**
  * 获取单只基金的实时估值
  * @param {string} fundCode - 基金代码
- * @returns {Promise<{code, name, estimatedNav, estimatedChange, lastNav, lastNavDate, updateTime, stale?: boolean}>}
+ * @returns {Promise<{code, name, estimatedNav, estimatedChange, lastNav, lastNavDate, updateTime, stale?: boolean, diyEstimate?: boolean, coveredWeight?: number}>}
  */
 export async function getRealtimeEstimate(fundCode) {
     const res = await fetch(`./api/fund-realtime/${fundCode}.js?rt=${Date.now()}`)
@@ -90,31 +90,46 @@ export async function getRealtimeEstimate(fundCode) {
 
     // 估值时间不是今天（QDII / 停牌 / 数据源异常等），fallback 到最新已披露净值
     if (!data || !data.gszzl || gzDate !== today) {
-        try {
-            const histRes = await fetch(
-                `./api/fund-history?fundCode=${fundCode}&pageIndex=1&pageSize=1&_t=${Date.now()}`
-            )
-            const histData = await histRes.json()
-            const latest = histData?.Data?.LSJZList?.[0]
-            if (latest && latest.FSRQ) {
-                // 若估值日期比历史最新披露日期还新，仍以估值为准；否则用历史净值
-                const useHistory = !gzDate || latest.FSRQ >= gzDate
-                if (useHistory) {
+        // 先拿最新已披露 NAV（DIY 和 stale 都需要）
+        const latest = await fetchLatestDisclosedNav(fundCode)
+        if (latest && latest.FSRQ) {
+            // 若估值日期比历史最新披露日期还新，仍以估值为准
+            const useHistory = !gzDate || latest.FSRQ >= gzDate
+            if (useHistory) {
+                // 尝试档 3：jjcc 十大重仓 × A 股实时价 DIY 估算
+                const diy = await tryDIYEstimate(fundCode)
+                if (diy) {
+                    const lastNavFloat = parseFloat(latest.DWJZ)
+                    const changeFloat = parseFloat(diy.estimatedChange)
+                    const estNav = Number.isFinite(lastNavFloat) && Number.isFinite(changeFloat)
+                        ? (lastNavFloat * (1 + changeFloat / 100)).toFixed(4)
+                        : latest.DWJZ
+                    const now = new Date()
+                    const pad = n => String(n).padStart(2, '0')
                     return {
                         code: fundCode,
                         name: data?.name || '',
-                        estimatedNav: latest.DWJZ,
-                        estimatedChange: latest.JZZZL || '0.00',
+                        estimatedNav: estNav,
+                        estimatedChange: diy.estimatedChange,
                         lastNav: latest.DWJZ,
                         lastNavDate: latest.FSRQ,
-                        // 使用披露日期的日期部分 + 收盘时间占位，供 UI 时间显示
-                        updateTime: `${latest.FSRQ} 15:00`,
-                        stale: true,
+                        updateTime: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
+                        diyEstimate: true,
+                        coveredWeight: diy.coveredWeight,
                     }
                 }
+                // 档 3 也拿不到 → 保持原有 stale 兜底
+                return {
+                    code: fundCode,
+                    name: data?.name || '',
+                    estimatedNav: latest.DWJZ,
+                    estimatedChange: latest.JZZZL || '0.00',
+                    lastNav: latest.DWJZ,
+                    lastNavDate: latest.FSRQ,
+                    updateTime: `${latest.FSRQ} 15:00`,
+                    stale: true,
+                }
             }
-        } catch {
-            // 忽略 fallback 错误，继续走原始数据
         }
     }
 
@@ -134,17 +149,187 @@ export async function getRealtimeEstimate(fundCode) {
 }
 
 /**
+ * 从历史净值端点取最新一条披露净值
+ * @param {string} fundCode
+ * @returns {Promise<{FSRQ: string, DWJZ: string, JZZZL: string} | null>}
+ */
+async function fetchLatestDisclosedNav(fundCode) {
+    try {
+        const histRes = await fetch(
+            `./api/fund-history?fundCode=${fundCode}&pageIndex=1&pageSize=1&_t=${Date.now()}`
+        )
+        const histData = await histRes.json()
+        return histData?.Data?.LSJZList?.[0] || null
+    } catch {
+        return null
+    }
+}
+
+// 档 3 DIY 估算：会话内缓存持仓（日内不变）
+const _holdingsCache = new Map() // fundCode -> { date, stocks }
+
+/**
+ * 将股票代码映射到 push2 secid
+ * A 股 6 位数字：沪市 6/9 开头 → 1.CODE，深市/创/科/北 → 0.CODE
+ * 港股 5 位数字：116.CODE（如 00981 中芯国际）
+ * 其他（美股字母代码）暂不支持，返回 null（贡献 0 权重）
+ */
+function getStockSecid(stockCode) {
+    if (!stockCode) return null
+    if (/^\d{6}$/.test(stockCode)) {
+        if (/^[69]/.test(stockCode)) return `1.${stockCode}`
+        return `0.${stockCode}`
+    }
+    if (/^\d{5}$/.test(stockCode)) {
+        return `116.${stockCode}`
+    }
+    return null
+}
+
+/**
+ * 档 3：用 jjcc 前十大重仓 × A 股实时涨跌，DIY 估算基金涨跌幅
+ * 权重按"占净值比例%"直接使用，未披露仓位按 0 处理（跟原生 gsz 同一套算法）
+ * @param {string} fundCode
+ * @returns {Promise<{estimatedChange: string, coveredWeight: number} | null>}
+ */
+async function tryDIYEstimate(fundCode) {
+    const today = new Date().toISOString().slice(0, 10)
+    let cached = _holdingsCache.get(fundCode)
+    if (!cached || cached.date !== today) {
+        try {
+            const holdings = await getFundHoldings(fundCode)
+            cached = { date: today, stocks: holdings.stocks || [] }
+            _holdingsCache.set(fundCode, cached)
+        } catch {
+            return null
+        }
+    }
+    const stocks = cached.stocks
+    if (!stocks || stocks.length === 0) return null
+
+    // 提取有 secid 的股票 + 权重
+    const entries = stocks
+        .map(s => ({
+            secid: getStockSecid(s.code),
+            weight: parseFloat(String(s.weight || '').replace('%', '')) || 0,
+        }))
+        .filter(e => e.secid && e.weight > 0)
+    if (entries.length === 0) return null
+
+    let priceMap = new Map()
+    try {
+        const secids = entries.map(e => e.secid).join(',')
+        const res = await fetch(`./api/push2-quote?secids=${secids}&_t=${Date.now()}`)
+        const data = await res.json()
+        const list = data?.data?.diff || []
+        for (const item of list) {
+            // 用返回的 f13（市场码）+ f12（代码）重建 secid，兼容沪(1)/深(0)/港(116)
+            const key = `${item.f13}.${item.f12}`
+            const change = parseFloat(item.f3)
+            if (Number.isFinite(change)) priceMap.set(key, change)
+        }
+    } catch {
+        return null
+    }
+    if (priceMap.size === 0) return null
+
+    // 加权：sum(weight% × change%) / 100 = 估算 gszzl%
+    let sum = 0
+    let coveredWeight = 0
+    for (const e of entries) {
+        if (priceMap.has(e.secid)) {
+            sum += e.weight * priceMap.get(e.secid) / 100
+            coveredWeight += e.weight
+        }
+    }
+    if (coveredWeight === 0) return null
+
+    return {
+        estimatedChange: sum.toFixed(2),
+        coveredWeight: Number(coveredWeight.toFixed(2)),
+    }
+}
+
+/**
+ * 批量拉取场内基金（ETF/LOF）二级市场实时行情。
+ * push2 对每个 code 同时探测沪(1.)/深(0.) 前缀，只有真实存在的会命中。
+ * 场外基金不返回，天然被过滤掉。
+ * @param {string[]} fundCodes
+ * @returns {Promise<Map<string, {estimatedNav, estimatedChange, lastNav, updateTime, market}>>}
+ */
+async function batchGetOnMarketQuotes(fundCodes) {
+    const map = new Map()
+    if (!fundCodes || fundCodes.length === 0) return map
+
+    // 每个 code 尝试沪深两个前缀，push2 会按存在性过滤
+    const secids = fundCodes.flatMap(c => [`1.${c}`, `0.${c}`]).join(',')
+    try {
+        const res = await fetch(`./api/push2-quote?secids=${secids}&_t=${Date.now()}`)
+        const data = await res.json()
+        const list = data?.data?.diff || []
+        for (const item of list) {
+            const code = String(item.f12 || '')
+            const gszzl = item.f3 // 涨跌幅 %
+            const price = item.f2 // 实时价（作为 estimatedNav 展示）
+            const prevClose = item.f18 // 昨收 = 上一日净值
+            const tsSec = Number(item.f124) // unix 秒
+            if (!code || gszzl == null || price == null) continue
+            const dt = tsSec ? new Date(tsSec * 1000) : new Date()
+            const pad = n => String(n).padStart(2, '0')
+            const updateTime = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+            // 上一交易日日期：粗略取 updateTime 的日期，UI 只在 stale 场景展示
+            const lastNavDate = updateTime.slice(0, 10)
+            map.set(code, {
+                code,
+                name: item.f14 || '',
+                estimatedNav: String(price),
+                estimatedChange: String(gszzl),
+                lastNav: prevClose != null ? String(prevClose) : String(price),
+                lastNavDate,
+                updateTime,
+                market: item.f13 === 1 ? 'SH' : 'SZ',
+                onMarket: true, // UI 用来打「场内」徽标
+            })
+        }
+    } catch {
+        // 静默：失败时全部走场外分支
+    }
+    return map
+}
+
+/**
  * 批量获取多只基金的实时估值
+ * - 场内 ETF/LOF：走 push2 拿真·二级市场成交价（不是估算）
+ * - 场外基金：走已下线的 gsz 接口 → 回退最新披露净值（stale: true）
  * @param {string[]} fundCodes
  * @returns {Promise<Array>}
  */
 export async function batchGetRealtimeEstimates(fundCodes) {
-    const results = await Promise.allSettled(
-        fundCodes.map(code => getRealtimeEstimate(code))
+    if (!fundCodes || fundCodes.length === 0) return []
+
+    // 1. 先一次性问 push2 哪些是场内
+    const onMarketMap = await batchGetOnMarketQuotes(fundCodes)
+
+    // 2. 剩余的走原有 gsz → history fallback 流程
+    const offMarketCodes = fundCodes.filter(c => !onMarketMap.has(c))
+    const offMarketResults = await Promise.allSettled(
+        offMarketCodes.map(code => getRealtimeEstimate(code))
     )
-    return results
+    const offMarketList = offMarketResults
         .filter(r => r.status === 'fulfilled')
         .map(r => r.value)
+
+    // 3. 按原始顺序合并
+    const combined = []
+    for (const code of fundCodes) {
+        if (onMarketMap.has(code)) {
+            combined.push(onMarketMap.get(code))
+        } else {
+            const off = offMarketList.find(x => x.code === code)
+            if (off) combined.push(off)
+        }
+    }
+    return combined
 }
 
 function formatDate(dateStr) {
