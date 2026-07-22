@@ -13,13 +13,18 @@ const commonHeaders = {
     'Accept-Language': 'zh-CN,zh;q=0.9',
 }
 
-// 对上游做重试，吸收 push2 偶发的 "fetch failed"/"empty reply"
-async function fetchWithRetry(url, options, retries = 3, baseBackoffMs = 150) {
+// 对上游做重试 + 绝对超时，吸收 push2 偶发的 "fetch failed"/"empty reply"
+async function fetchWithRetry(url, options = {}, retries = 3, baseBackoffMs = 150, timeoutMs = 4000) {
     let lastErr
     for (let i = 0; i < retries; i++) {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), timeoutMs)
         try {
-            return await fetch(url, options)
+            const res = await fetch(url, { ...options, signal: controller.signal })
+            clearTimeout(timer)
+            return res
         } catch (e) {
+            clearTimeout(timer)
             lastErr = e
             if (i < retries - 1) {
                 await new Promise(r => setTimeout(r, baseBackoffMs * (i + 1)))
@@ -28,6 +33,10 @@ async function fetchWithRetry(url, options, retries = 3, baseBackoffMs = 150) {
     }
     throw lastErr
 }
+
+// secids 白名单：仅允许 <市场码>.<字母数字代码> 逗号分隔
+// 市场码：1(沪股) / 0(深股/北) / 116(港股) / 105/106/107(美股) 等
+const SECIDS_RE = /^(?:\d{1,3}\.[A-Za-z0-9]{2,10})(?:,\d{1,3}\.[A-Za-z0-9]{2,10}){0,199}$/
 
 // ========== API 代理（使用原生 fetch）==========
 
@@ -137,7 +146,13 @@ const PUSH2_HOSTS = ['push2.eastmoney.com', 'push2delay.eastmoney.com']
 
 app.get('/api/push2-quote', async (req, res) => {
     const queryString = req.url.includes('?') ? req.url.split('?')[1] : ''
-    const suffix = `?fltt=2&fields=f2,f3,f12,f13,f14,f18,f124&ut=fa5fd1943c7b386f172d6893dbfba10b&${queryString}`
+    // 校验 secids 参数：只允许"<市场码>.<字母数字代码>"逗号分隔，防注入
+    const secidsMatch = queryString.match(/(?:^|&)secids=([^&]+)/)
+    const rawSecids = secidsMatch ? decodeURIComponent(secidsMatch[1]) : ''
+    if (!rawSecids || !SECIDS_RE.test(rawSecids)) {
+        return res.status(400).json({ error: 'invalid secids' })
+    }
+    const suffix = `?fltt=2&fields=f2,f3,f12,f13,f14,f18,f124&ut=fa5fd1943c7b386f172d6893dbfba10b&secids=${encodeURIComponent(rawSecids)}`
     let lastErr
     for (const host of PUSH2_HOSTS) {
         const url = `https://${host}/api/qt/ulist.np/get${suffix}`
@@ -147,7 +162,7 @@ app.get('/api/push2-quote', async (req, res) => {
                     ...commonHeaders,
                     'Referer': 'https://quote.eastmoney.com/',
                 },
-            }, 2, 120)
+            }, 2, 120, 3500)
             const data = await response.text()
             console.log(`[Proxy] push2-quote via ${host} <- ${response.status}, ${data.length} bytes`)
             res.set('Content-Type', response.headers.get('content-type') || 'application/json')

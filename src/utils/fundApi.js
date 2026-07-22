@@ -2,6 +2,28 @@
  * 基金数据 API（数据来源：东方财富/天天基金）
  */
 
+// 两位补零工具，供多处日期格式化复用
+const pad = n => String(n).padStart(2, '0')
+
+/**
+ * 获取当前 Beijing (Asia/Shanghai) 日期字符串 "YYYY-MM-DD"。
+ * A 股/基金作息都基于北京时间，不能用 toISOString() 拿 UTC 日期作缓存/跨日 key，
+ * 否则 Beijing 00:00-08:00 时会误判为前一天。
+ */
+export function getBeijingDate() {
+    // 转换到 UTC+8 再取日期部分
+    const utcMs = Date.now()
+    const cn = new Date(utcMs + 8 * 3600 * 1000)
+    return `${cn.getUTCFullYear()}-${pad(cn.getUTCMonth() + 1)}-${pad(cn.getUTCDate())}`
+}
+
+/**
+ * 校验是否是合法的场外基金代码：6 位数字
+ */
+function isValidFundCode(code) {
+    return typeof code === 'string' && /^\d{6}$/.test(code)
+}
+
 /**
  * 搜索基金
  * @param {string} keyword - 基金代码或名称关键词
@@ -85,7 +107,7 @@ export async function getRealtimeEstimate(fundCode) {
         data = null
     }
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getBeijingDate()
     const gzDate = typeof data?.gztime === 'string' ? data.gztime.slice(0, 10) : ''
 
     // 估值时间不是今天（QDII / 停牌 / 数据源异常等），fallback 到最新已披露净值
@@ -105,7 +127,6 @@ export async function getRealtimeEstimate(fundCode) {
                         ? (lastNavFloat * (1 + changeFloat / 100)).toFixed(4)
                         : latest.DWJZ
                     const now = new Date()
-                    const pad = n => String(n).padStart(2, '0')
                     return {
                         code: fundCode,
                         name: data?.name || '',
@@ -113,7 +134,7 @@ export async function getRealtimeEstimate(fundCode) {
                         estimatedChange: diy.estimatedChange,
                         lastNav: latest.DWJZ,
                         lastNavDate: latest.FSRQ,
-                        updateTime: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
+                        updateTime: formatDateTime(now),
                         diyEstimate: true,
                         coveredWeight: diy.coveredWeight,
                     }
@@ -149,6 +170,13 @@ export async function getRealtimeEstimate(fundCode) {
 }
 
 /**
+ * 将 Date 对象格式化为 "YYYY-MM-DD HH:MM"（本地时区），供 updateTime 使用
+ */
+function formatDateTime(dt) {
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+}
+
+/**
  * 从历史净值端点取最新一条披露净值
  * @param {string} fundCode
  * @returns {Promise<{FSRQ: string, DWJZ: string, JZZZL: string} | null>}
@@ -156,10 +184,14 @@ export async function getRealtimeEstimate(fundCode) {
 async function fetchLatestDisclosedNav(fundCode) {
     try {
         const histRes = await fetch(
-            `./api/fund-history?fundCode=${fundCode}&pageIndex=1&pageSize=1&_t=${Date.now()}`
+            `./api/fund-history?fundCode=${fundCode}&pageIndex=1&pageSize=5&_t=${Date.now()}`
         )
         const histData = await histRes.json()
-        return histData?.Data?.LSJZList?.[0] || null
+        const list = histData?.Data?.LSJZList || []
+        if (list.length === 0) return null
+        // 防御性：API 通常返回倒序，若异常则本地按 FSRQ 排序取最新
+        const sorted = [...list].sort((a, b) => (a.FSRQ < b.FSRQ ? 1 : -1))
+        return sorted[0] || null
     } catch {
         return null
     }
@@ -193,7 +225,7 @@ function getStockSecid(stockCode) {
  * @returns {Promise<{estimatedChange: string, coveredWeight: number} | null>}
  */
 async function tryDIYEstimate(fundCode) {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getBeijingDate()
     let cached = _holdingsCache.get(fundCode)
     if (!cached || cached.date !== today) {
         try {
@@ -261,10 +293,15 @@ async function batchGetOnMarketQuotes(fundCodes) {
     const map = new Map()
     if (!fundCodes || fundCodes.length === 0) return map
 
+    // 只对合法 6 位数字基金代码做场内探测，避免非标准 code 拼到 secid 后误命中股票
+    const validCodes = fundCodes.filter(isValidFundCode)
+    if (validCodes.length === 0) return map
+
     // 每个 code 尝试沪深两个前缀，push2 会按存在性过滤
-    const secids = fundCodes.flatMap(c => [`1.${c}`, `0.${c}`]).join(',')
+    const secids = validCodes.flatMap(c => [`1.${c}`, `0.${c}`]).join(',')
     try {
         const res = await fetch(`./api/push2-quote?secids=${secids}&_t=${Date.now()}`)
+        if (!res.ok) return map
         const data = await res.json()
         const list = data?.data?.diff || []
         for (const item of list) {
@@ -275,8 +312,7 @@ async function batchGetOnMarketQuotes(fundCodes) {
             const tsSec = Number(item.f124) // unix 秒
             if (!code || gszzl == null || price == null) continue
             const dt = tsSec ? new Date(tsSec * 1000) : new Date()
-            const pad = n => String(n).padStart(2, '0')
-            const updateTime = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+            const updateTime = formatDateTime(dt)
             // 上一交易日日期：粗略取 updateTime 的日期，UI 只在 stale 场景展示
             const lastNavDate = updateTime.slice(0, 10)
             map.set(code, {

@@ -21,6 +21,17 @@ const COLOR_PALETTE = [
     '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#6366f1',
 ]
 
+// 计算 updateTime "YYYY-MM-DD HH:MM" 距离现在的分钟数（本地时区，负数视为 0）
+function computeLagMinutes(updateTime) {
+    if (typeof updateTime !== 'string') return 0
+    const m = updateTime.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/)
+    if (!m) return 0
+    const [, y, mo, d, hh, mm] = m
+    const dt = new Date(Number(y), Number(mo) - 1, Number(d), Number(hh), Number(mm))
+    const diff = (Date.now() - dt.getTime()) / 60000
+    return diff > 0 ? Math.floor(diff) : 0
+}
+
 export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, lastUpdateTime, loading }) {
     const [, , isDark] = useTheme()
     const navigate = useNavigate()
@@ -200,6 +211,11 @@ export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, la
                                 const staleDate = isStale && typeof item.lastNavDate === 'string'
                                     ? item.lastNavDate.slice(5).replace('-', '/')
                                     : ''
+                                // 若保留的是上次非 stale 数据，updateTime 可能落后，超过 2 分钟就提示
+                                const lagMinutes = !isStale && typeof item.updateTime === 'string'
+                                    ? computeLagMinutes(item.updateTime)
+                                    : 0
+                                const isLagging = lagMinutes >= 2
                                 return (
                                     <motion.div
                                         key={item.code}
@@ -258,7 +274,13 @@ export default function RealtimeBoard({ funds, realtimeData, realtimeHistory, la
                                         </p>
                                         <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
                                             <span>{isStale ? '净值' : (isOnMarket ? '现价' : '估算')} {item.estimatedNav}</span>
-                                            <span>{isStale ? staleDate : (isDIY ? `覆盖 ${item.coveredWeight ?? '--'}%` : `${points.length} 点`)}</span>
+                                            <span>
+                                                {isStale
+                                                    ? staleDate
+                                                    : (isLagging
+                                                        ? `落后 ${lagMinutes}m`
+                                                        : (isDIY ? `覆盖 ${item.coveredWeight ?? '--'}%` : `${points.length} 点`))}
+                                            </span>
                                         </div>
                                     </motion.div>
                                 )

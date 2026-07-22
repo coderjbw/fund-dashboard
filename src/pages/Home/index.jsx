@@ -6,7 +6,7 @@ import FundChart from './components/FundChart'
 import RealtimeBoard from './components/RealtimeBoard'
 import InvestAdvice from './components/InvestAdvice'
 import ThemeToggle from '@/components/ThemeToggle'
-import { batchGetRealtimeEstimates, getFundHistory } from '@utils/fundApi'
+import { batchGetRealtimeEstimates, getFundHistory, getBeijingDate } from '@utils/fundApi'
 import { isTradeTime } from '@utils/tradeTime'
 
 const POLL_INTERVAL = 60000 // 60 秒
@@ -28,7 +28,7 @@ function loadRealtimeHistory() {
         const raw = localStorage.getItem(STORAGE_KEY)
         if (!raw) return {}
         const parsed = JSON.parse(raw)
-        const today = new Date().toISOString().slice(0, 10)
+        const today = getBeijingDate()
         // 跨日清理
         if (parsed._date !== today) {
             localStorage.removeItem(STORAGE_KEY)
@@ -42,7 +42,7 @@ function loadRealtimeHistory() {
 }
 
 function saveRealtimeHistory(history) {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getBeijingDate()
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ _date: today, ...history }))
 }
 
@@ -66,6 +66,8 @@ export default function Home() {
     const [lastUpdateTime, setLastUpdateTime] = useState('')
     const [realtimeLoading, setRealtimeLoading] = useState(false)
     const pollRef = useRef(null)
+    // 防并发：同一时刻只允许一个 fetchRealtime 在飞
+    const inflightRef = useRef(false)
 
     // 移动端适配状态 - 初始化时就检测屏幕宽度
     const [isMobile, setIsMobile] = useState(() => {
@@ -154,6 +156,8 @@ export default function Home() {
 
     const fetchRealtime = useCallback(async () => {
         if (funds.length === 0) return
+        if (inflightRef.current) return // 已有请求在飞，跳过本次触发
+        inflightRef.current = true
         setRealtimeLoading(true)
         try {
             const codes = funds.map(f => f.code)
@@ -172,7 +176,7 @@ export default function Home() {
 
             // 取 API 返回的日期和时间
             const apiDatetime = results[0]?.updateTime || ''
-            const today = new Date().toISOString().slice(0, 10)
+            const today = getBeijingDate()
 
             if (results.length > 0 && apiDatetime) {
                 const timeOnly = apiDatetime.split(' ')[1] || apiDatetime
@@ -217,6 +221,7 @@ export default function Home() {
             // 静默
         } finally {
             setRealtimeLoading(false)
+            inflightRef.current = false
         }
     }, [funds])
 
